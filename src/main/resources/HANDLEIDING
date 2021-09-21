@@ -1,0 +1,720 @@
+We maken hier een SpringBoot met IntelliJ, Waarvan we
+de DATA opvragen in Postman en PGAdmin
+
+Stap 1:
+-------
+We gaan eerst een soort Main Class maken:
+in dit geval de ~ DemoApplication ~ Class.
+
+Dit Moet erin staan:
+
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+}
+
+Stap 2:
+-------
+
+Vervolgens Gaan we CONTROLLERS classes aanmaken waarmee Postman
+Get, Post, Delete en Put kan uitvoeren. Je begint met het
+aanmaken van een nieuwe package waarin je deze Controller Classes zet.
+De eerste Controller Class die je aanmaakt is
+~ BaseController ~ , Hier staat het volgende in:
+
+public class BaseController {
+
+    @GetMapping(value = "/")
+    public String sayHello(@RequestParam(required = false) String naam) {
+        if (naam == null) {
+            return "Hello world";
+        }
+        else {
+            return "Hello " + naam + "!";
+        }
+    }
+
+    @GetMapping(value = "/peter")
+    public String sayPeter() {
+        return "Hello Peter!";
+    }
+
+    @GetMapping(value = "/info")
+    public String info() {
+        return "This is my frist great Webservice endpoint!!!";
+    }
+
+}
+
+
+Daarna maak je bijv een
+GreetController en QuestionController aan als je wilt.
+Vergeet voor je GreetController niet je application properties
+aan te passen.
+
+Stap 3:
+-------
+
+De ~ PersonController ~ Class is de Class waar we
+zorgen dat de Get,Post,Delete en Put METHODES worden
+gedefineerd. De inhoud van deze Class is in eerste instantie zo:
+
+package com.example.demo.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+public class PersonController {
+
+    private static List<String> personen = new ArrayList<>();
+
+
+    @GetMapping(value = "/personen")
+    public ResponseEntity getPersonen() {        //collection
+        return ResponseEntity.ok(personen);
+    }
+
+    /*
+    Je Gaat hierboven niet zomaar een String meegeven,
+    maar een Response meegeven met als
+    header = "/personen"
+    body = personen
+    ok = de statuscode
+     */
+
+    @GetMapping(value = "/personen/{nr}")
+    public ResponseEntity getPersoon(@PathVariable int nr) {   //item
+        return ResponseEntity.ok(personen.get(nr));
+    }
+/* Zie voor de Exception Stap 4...
+Hierboven kan een 500 code ontstaan als een gebruiker bijv persoon nr 7 wil opvragen en
+je hebt er maar 5 ingezet, normaal zouden we dat oplossen met:
+
+@GetMapping(value = "/personen/{nr}")
+    public ResponseEntity getPersoon(@PathVariable int nr) {
+        try {
+            return ResponseEntity.ok(personen.get(nr));
+        }
+        catch (Exception ex) {
+            return ResponseEntity.badRequest().body("Person Not FOund...");
+        }
+
+Alleen gaan we dit nog beter oplossen, als we het met die try/catch oplossen, moeten
+dat bij alle stukken code dat {nr} gebruikt gaan toevoegen om maar niet die code 500
+te krijgen.
+
+ */
+    @PostMapping(value = "/personen")
+    public ResponseEntity addPersoon(@RequestBody String persoon) {
+        personen.add(persoon);
+        return ResponseEntity.ok("Toegevoegd");
+    }
+/*
+Hierboven zie je een @Postmapping
+met public ResponseEntity addPersoon(@RequestBody String persoon)
+geef je een String(een naam van een persoon) mee aan de BODY van personen (in de ArrayList)
+
+Voor POSTMAN programma :Met POST voeg je namen, nummers ect toe aan je ArrayList
+Doe dit in de BODY en zet m op RAW.
+
+doordat je in Intellij : return ResponseEntity.ok("Toegevoegd") heb toegevoegd
+aan de return, krijg je in POSTMAN het woord "Toegevoegd" in je console scherm
+als je de data hebt ingevuld en op SEND hebt gedrukt.
+ */
+
+    @DeleteMapping(value = "/personen/{nr}")
+    public ResponseEntity deletePersoon(@PathVariable int nr) {
+        personen.remove(nr);
+        return ResponseEntity.ok("Verwijderd");
+    }
+
+/*
+Hierboven Staat de code voor de DeleteMapping
+hier kun je mee DELETEN met PathVariable kun je per
+nummerpositie kiezen welke je DELETE en met ResponseEntity.ok
+met parameters "Verwijderd" geeft Postman dat ook als boodschap mee
+zodra je op SEND(ok) hebt gedrukt.
+ */
+
+    @PutMapping(value = "/personen/{nr}")
+    public ResponseEntity deletePersoon(@PathVariable int nr, @RequestBody String persoon) {
+        personen.set(nr, personen);
+        return ResponseEntity.ok("Update");
+    }
+}
+    /*
+    Hierbpven heb je de PUT (update) Mapping
+    Hiermee vervang op een SPECIFIEKE(@PathVariable int nr)
+    plaats in de lijst in /personen/ dus je haalt er
+    1 weg (DELETE) en voegt meteen een nieuwe op diezelfde plek
+     */
+
+Stap 4:
+-------
+je kunt bij alle methodes met {nr} kan een 500 code krijgen
+als een gebruiker bijv persoon nr 7 wil opvragen en
+je hebt er maar 5 ingezet, normaal zouden we dat oplossen met:
+TRY/CATCH STATEMENTS:::
+
+@GetMapping(value = "/personen/{nr}")
+    public ResponseEntity getPersoon(@PathVariable int nr) {
+        try {
+            return ResponseEntity.ok(personen.get(nr));
+        }
+        catch (Exception ex) {
+            return ResponseEntity.badRequest().body("Person Not FOund...");
+        }
+
+Alleen gaan we dit nog beter oplossen, als we het met die try/catch oplossen, moeten
+dat bij alle stukken code dat {nr} gebruikt gaan toevoegen om maar niet die code 500
+te krijgen.
+
+We maken een nieuwe CONTROLLER CLASS aan genaamd
+~ ExceptionController ~
+deze vullen we hiermee:
+
+package com.example.demo.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
+import quin.novi.exception.RecordNotFoundException;
+
+@RestController
+@ControllerAdvice
+
+public class ExceptionController {
+    @ExceptionHandler(value = RecordNotFoundException.class)
+    public ResponseEntity<Object>exception(RecordNotFoundException exception) {
+        return ResponseEntity.notFound().build();
+    }
+}
+
+Stap 5:
+-------
+
+We gaan onze eigen EXCEPTION maken ipv TRY/Catch (dit is meer Java ding
+dan een Springboot ding, want je extend deze CLASS naar de
+Java RuntimeException. Dit is hoe je dat doet:
+We maken een nieuwe PACKAGE aan en die noemen we "exception"
+Daarin maken we een nieuwe CLASS genaamd ~ RecordNotFoundException ~
+deze vullen we met:
+
+package com.example.demo.exception;
+
+public class RecordNotFoundException extends RuntimeException{
+    private static final long serialVersionUID = 1L;
+}
+
+
+*** Vervolgens verander je een stukje code in PersoonController(bij item):
+
+@GetMapping(value = "/personen/{nr}")
+    public ResponseEntity getPersoon(@PathVariable int nr) {
+        try {
+            return ResponseEntity.ok(personen.get(nr));
+        }
+        catch (Exception ex) {
+            throw new RecordNotFoundException();
+        }
+    }
+
+Stap 6:
+--------
+Maak een Model package met klasse
+
+We zijn nu even klaar met CONTROLLERS en gaan ons op ENTITIES
+concentreren. Maak een nieuwe PACKAGE aan en noem die ~Model~
+maak daarin een CLASS aan die je ~ Persoon ~ noemt, maak daarin
+je Attributes en een lege constructor(Want SpringBoot geeft via
+de Setters de waarden aan je Attributes).
+
+in de ~PersoonController~ kun je nu :
+    private static List<Persoon> personen = new ArrayList<>();
+dus de List<String> verander/verwijs je met Class Monster en import deze ook.
+Dit is nu je Model, verander ook de verwijzingen naar voorheen
+String uit de list naar Persoon zoals bij bijv:
+
+    @PutMapping(value = "/personen/{nr}")
+    public ResponseEntity deletePersoon ( @PathVariable int nr, @RequestBody String persoon){
+        personen.set(nr, persoon);
+        return ResponseEntity.ok("Update");
+    }
+
+Wordt nu
+
+    @PutMapping(value = "/personen/{nr}")
+    public ResponseEntity deletePersoon ( @PathVariable int nr, @RequestBody Persoon persoon){
+        personen.set(nr, persoon);
+        return ResponseEntity.ok("Update");
+    }
+
+Let op!!!
+Je kunt nu ook voor deze code bij Postman het niet meer als voorheen
+(zoals een String) POSTen bijv 'Dracula'. Je moet het nu als ArrayList POSTen.
+
+Verander bij POST bij de BODY het van 'text' naar 'JSON'
+
+Vul je Array zo in:
+{
+    "voornaam":"Count",
+    "achternaam":"Dracula",
+    "woonplaats":"Transylvania"
+}
+
+POST en dan staan ze erin.
+
+------
+------
+EXTRA:
+
+Wil je m op achternaam laten zoeken?
+
+Update dan je (collection)code in IntelliJ van Class PersoonController van:
+
+    @GetMapping(value = "/personen")
+    public ResponseEntity getPersonen() {        //collection
+        return ResponseEntity.ok(personen);
+    }
+
+naar:
+
+    @GetMapping(value = "/personen")
+    public ResponseEntity getPersonen(@RequestParam(required = false) String achternaam) {        //collection
+        if (achternaam == null) {
+            return ResponseEntity.ok(personen);
+        } else {
+            return ResponseEntity.ok(personen.stream().filter(persoon->persoon.lastName.equalsIgnoreCase(achternaam)).toArray());
+            }
+        }
+
+   Ik trek voor de duidelijheid de code nog even uit elkaar:
+
+    @GetMapping(value = "/personen")
+    // hier ga je dus voor de Get optie in Postman (Vraag Op) \\
+       public ResponseEntity getPersonen(@RequestParam(required = false) String achternaam) {        //collection
+    // vervolgens haalt ie zn Get Response op met extra gegeven dat;!!! IF !!! je in Postman /personen
+       en verder niets invult prima (== null) dan geeft ie hele lijst met alle Attributes weer
+       !!!ELSE!!! als je /personen?lastName=dracula intypt en "GET" geeft ie alleen Attributes van
+       de objecten met de achternaam Dracula weer\\
+           if (achternaam == null) {
+               return ResponseEntity.ok(personen);
+
+           } else {
+               return ResponseEntity.ok(personen.stream()
+               .filter(persoon->persoon.achternaam.equalsIgnoreCase(achternaam))
+               .toArray());
+               }
+           }
+
+Stap 7:
+--------
+
+We gaan ons nu bezig houden met DATABASE. Eerst moeten we de POM gaan Updaten,
+Bij Dependencies komt de volgende code:
+
+    <dependecies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+(Je kunt ook bij Spring Initializer website DEPENDENCIES waar je al Spring web moest
+aanvinken ook Spring Data JPA aanvinken, dat soort voor de SQL en je moet een POSTGRESQL Driver erbij doen)
+
+Weer terug naar IntelliJ.
+
+Je moet je application.properties aanpassen, die vind je bij de resources map.
+Dit moet erbij komen te staan:
+
+# datasource
+# PostgreSQl
+spring.datasource.platform=postgres
+spring.datasource.url=jdbc:postgresql://localhost:5432/springboot
+spring.datasource.username=springboot
+spring.datasource.password=springboot
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+#jpa (java persistance api)
+spring.jpa.database=postgresql
+spring.jpa.generate-ddl=true
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.properties.hibernate.dialect= org.hibernate.dialect.PostgreSQLDialect
+
+- Bij //localhost:5432/ kun je bij properties/connection in PGADMIN
+checken of je dezelfde port gebruikt
+- Bij : spring.datasource.username=springboot en
+        spring.datasource.password=springboot moet je
+        ook zorgen dat je in PGAdmin hetzelfde grbruikt
+
+
+Stap 8:
+-------
+
+We willen nu dat de ATTRIBUTES van CLASS ~ Persoon ~ als tabel in onze DATABASE gaat.
+
+
+hiervoor moet je in CLASS ~ Persoon ~ boven
+
+package model;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+@Entity
+public class Persoon {
+    public long id;
+    public String achternaam;
+    public String voornaam;
+    public String woonplaats;
+
+    public Persoon() {
+    }
+
+    // GETTERS N SETTERS
+
+    @Id
+    public long getId() { return id; }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+zetten zodat deze Class wordt
+herkend als een entity.
+
+!!!!!
+De Java code wordt naar PGAdmin vertaald door ORM
+ORM is OBJECT RELATIONAL MAPPING
+de Implementation is HIBERNATE
+!!!!!
+
+Voor in CLASS ¬ Persoon ¬
+Je moet ook even zorgen dat de ID AUTOGENERATED wordt, dus de eerste data
+die je invult = 1 de tweede data =2 enz.
+Dit doe je door de "id" te updaten naar:
+@Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public long id;
+
+Ook willen we dat de waardes van voornaam en achternaam
+niet meer dan 80 CHARACTERS kunnen bevatten en
+woonplaats niet meer dan 120 characters
+Dit verander je dan zo:
+
+    @Column(length = 80)
+    public String voornaam;
+
+    @Column(length = 80)
+    public String achternaam;
+
+    @Column(length = 120)
+    public String woonplaats;
+
+Als laatste in deze stap wil ik alvast wat gegevens in IntelliJ
+invoeren die dan in PGadmin te zien moeten zijn:
+-eerst maak je in resources een data.sql bestand door met rechtermuisknop
+op resources te klikken en een nieuwe FILE aan te maken en die noem je :
+
+data.sql
+
+daar doe je met SQL taal het zo invullen:
+
+INSERT INTO Persoon (voornaam, achternaam, woonplaats)
+VALUES ('Vlad', 'Dracula', 'Transylvania'),
+       ('Albert', 'Einstein', 'VS');
+
+
+Stap 9:
+-------
+Je hebt nu dus een MODEL (Persoon)
+Deze wordt afgebeeld op de DATABASE (PGAdmin)
+Je hebt nu nog een tool nodig die die data ophaalt:
+
+DE REPOSITORY
+
+Je hebt de WEB LAYER(public), de SERVICE LAYER(public/private) en de REPOSITORY LAYER(private)
+De Repository is de interface aan de achterkant.
+
+Je Maakt een nieuwe PACKAGE (:repository) en daarin kies je binnen je CLASS de Interface
+(rechtermuisknop klikken op de package>new>class>interface)
+en die noem je PersoonRepository en je vult dit in:
+
+package com.example.demo.repository;
+
+import com.example.demo.model.Persoon;
+import org.springframework.data.repository.CrudRepository;
+
+public interface PersoonRepository extends CrudRepository<Persoon, Long> {
+}
+
+Je zegt hier dat je gebruik wilt maken van een CRUD REPOSITORY die weer
+gebruik maakt van springframework.data.repository.CrudRepository
+Wat je er zelf aan toevoegd is dat je MONSTER en LONG(ID)
+en deze CLASS extends (haalt data uit de CrudRepository)
+
+Je hebt nog meer REPOSITORIES (JSA & Paging and Sorting). en je hebt binnen de
+CRUD REPOSITORY ook nog een zooi opties behalve Long die we net gebruikt hebben
+zoek ze op op het internet
+;;;
+
+We gaan ook wat dingen in onze code aanpassen voor de REPOSITORY
+
+package com.example.demo.controller;
+
+import com.example.demo.exception.RecordNotFoundException;
+import com.example.demo.model.Persoon;
+import com.example.demo.repository.PersoonRepository;
+import org.apache.coyote.Response;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+public class PersoonController {
+
+    @Autowired
+    private PersoonRepository persoonRepository;
+
+    @GetMapping(value = "/personen")
+    public ResponseEntity getPersonen() {
+        Iterable<Persoon> personen = persoonRepository.findAll();
+        return ResponseEntity.ok(personen);
+    }
+
+    @GetMapping(value = "/personen/{nr}")
+    public ResponseEntity getPersoon(@PathVariable long nr) {
+        try {
+            Optional<Persoon> persoon = persoonRepository.findById(nr);
+            return ResponseEntity.ok(persoon);
+        }
+        catch (IndexOutOfBoundsException ex) {
+            System.out.println(ex);
+            throw new RecordNotFoundException();
+        }
+    }
+
+    @PostMapping(value = "/personen")
+    public ResponseEntity addPersoon(@RequestBody Persoon persoon) {
+        persoonRepository.save(persoon);
+        return ResponseEntity.ok("Toegevoegd");
+    }
+
+    @DeleteMapping(value = "/personen/{nr}")
+    public ResponseEntity deletePersoon(@PathVariable long nr) {
+        persoonRepository.deleteById(nr);
+        return ResponseEntity.ok("Verwijderd");
+    }
+
+    @PutMapping(value = "/personen/{nr}")
+    public ResponseEntity updatePersoon(@PathVariable long nr, @RequestBody Persoon persoon) {
+        return ResponseEntity.ok("Aangepast");
+    }
+
+}
+
+
+Je hebt hier dus bij personen/ de ARRAYLLIST vervangen door een functie van de
+REPOSITORY findAll()
+
+Je hebt ook de bij de GET om 1 monster bij nummer op te vragen dit vervangen
+door REPOSITORY findById(nr)
+
+Je hebt ook de bij de POST om 1 monster bij te voegen dit vervangen
+door REPOSITORY save()
+
+Je hebt ook de bij de Delete om 1 monster te verwijderen dit vervangen
+door REPOSITORY deleteById(nr)
+
+Je hebt ook de bij de PUT om 1 monster te vervangen dit vervangen
+door REPOSITORY updatePersoon(@PathVariable long nr, @RequestBody Monster monster)
+
+
+Stap 10:
+--------
+
+Je hebt bij Spring Boot verschillende lagen;
+
+- Controller Classes > Presentation Layer (authentication en JSON translation) > Data Transfer Object > Public
+- Service Classes > Business Layer (business logic, validation en authorization) > Data Transfer Object/Domain Model > Public/Private
+- Repository Classes > Persistance layer (Storage Logic) > Domain Model > Private
+- DataBase (Actual database)
+
+In onze code staat nog geen SERVICE CLASSES laag, dus die moeten we gaan plaatsen.
+
+We gaan ons nu bezig houden met een een Service Layer in je IntelliJ
+te maken door een Service Package, PersoonServiceImpl Class en
+PersoonService Interface(Class) aan te maken.
+Dit wordt de tussenpersoon tussen je PersoonController Class uit je
+controller package en je Persoon Repository Class uit je repository package.
+
+We gaan ook wat veranderingen aanbrengen in je PersoonController Class, omdat
+die nu met de Repository verbonden is maar de SERVICE moet er dus tussen:
+Controller>Service>Repository>Database.
+
+We maken dus een nieuwe package aan en die noemen we : service
+We maken in deze 'service' package een Class aan die noemen we PersoonServiceImpl.
+
+--
+
+In je PersoonController gaan je @GetMapping, @PostMapping, @DeleteMapping en @PutMapping
+nog via je REPOSITORY, we willen graag dat dit via je SERVICE package en
+Classes/interfaces gaat die dan de data uit de Repository halen.
+
+Je vervangt de @Autowired van PersoonRepository naar PersoonService(interface) dus:
+
+@Autowired
+private PersoonRepository persoonRepository;
+
+wordt:
+
+@Autowired
+private PersoonService persoonService;
+
+Bij de @Getmapping voor "/personen" vervang je dus :
+Iterable<Persoon> personen = persoonRepository.findAll();
+voor
+Iterable<Persoon> personen = persoonService.findAll();
+
+--
+
+Bij de PersoonServiceImpl (Class) roep je dan de REPOSITORY aan:
+(ook hebben we deze Class aan de PersoonService Interface gekoppeld(overerving)
+ook hebben we voor Springboot de @Service toegevoegd en een
+constructor aangemaakt
+@Service
+public class PersoonServiceImpl implements PersoonService {
+
+    private final PersoonRepository persoonRepository;
+
+    public PersoonServiceImpl(PersoonRepository persoonRepository) {
+        this.persoonRepository = persoonRepository;
+    }
+
+    public Iterable<Persoon> findAll() {
+        Iterable<Persoon> personen = persoonRepository.findAll();
+        return personen;
+    }
+
+Je kunt nu, als je ook de andere @Mapping in PersoonController hebt
+aangepast, daar de METHODE highlighten en dan kun je met de foutmelding
+-create method- doen en dan maakt ie de methode aan in de PersoonService Class.
+
+NU gaat ie dus in je PersoonController voor bijv @GetMapping .findAll methode EERST
+naar PersoonService Class in service package en die gebruikt de .findAll methode
+uit de PersoonRepository.
+
+Dit klinkt omslachtig maar zo kun je ervoor zorgen dat al je commandos en acties
+vanuit de service package uitgevoerd worden, waardoor je programma een stuk
+overzichtelijker wordt.
+
+Je kunt nu dus allerlei methodes implementeren vanuit PersoonService
+zoals .findAllByFirstName enz.
+
+De try - catch methode kun je nu ook verplaatsen naar de PersoonService,
+want die hoort hier ook, dus de record-not-found methode kun je nu bijv ook
+bij de .delete(nr) methode gebruiken:
+
+    public void deleteById(long nr) {
+        try {
+            persoonRepository.deleteById(nr);
+        }
+        catch (IndexOutOfBoundsException ex) {
+            System.out.println(ex);
+            throw new RecordNotFoundException();
+        }
+    }
+
+Verder hebben we bij de RecordNotFoundException een super message geinstantieerd
+zodat als het {NR} niet gevonden kan worden wij zelf de "message" bij de foutmelding
+voor de gebruiker kunnen bepalen.
+
+Als laatste zet je nog bij je application.properties in de resources map
+de volgende dingen erbij:
+
+(bij #jpa):
+
+spring.jpa.defer-datasource-initialization=true
+
+# database initialization
+spring.sql.init.mode=always
+spring.sql.init.platform=postgres
+
+# Hibernate
+spring.jpa.hibernate.ddl-auto=create (deze was update)
+
+---
+
+Als extra nog wat extra uitleg over wat hieronder staat:
+
+@Service
+public class PersoonServiceImpl implements PersoonService {
+
+    private final PersoonRepository persoonRepository;
+
+    public PersoonServiceImpl(PersoonRepository persoonRepository) {
+        this.persoonRepository = persoonRepository;
+    }
+
+    public Iterable<Persoon> findAll() {
+        Iterable<Persoon> personen = persoonRepository.findAll();
+        return personen;
+    }
+
+...Vooral dit stukje:
+
+    private final PersoonRepository persoonRepository;
+
+    public PersoonServiceImpl(PersoonRepository persoonRepository) {
+        this.persoonRepository = persoonRepository;
+    }
+
+... We hebben eerst de Class PersoonRepository in deze Class geimplementeerd
+zodat we via deze Class de data kunnen binnenhalen in deze PersoonServiceImpl Class.
+We hebben deze import Class(PersoonRepository) een ATTRIBUTE persoonRepository gegeven.
+Deze haalt zijn VALUE via de PersoonRepository Class uit de Persoon Class uit de model package.
+
+... We hebben ook een CONSTRUCTOR aangemaakt, met de ARGUMENT persoonRepository uit de
+CLASS PersoonRepository(dus de data uit model/Persoon) die je nu kunt gebruiken(moet wel PUBLIC):
+
+    public PersoonServiceImpl(PersoonRepository persoonRepository) {
+        this.persoonRepository = persoonRepository;
+    }
+
+---
+Als laatste in deze stap:
+Iterable (vaagst)
+Collection (vaag)
+List (vaag/helder)
+ArrayList(helder)
+
+Je gebruikt in Springboot meestal Iterables(interfaces) omdat deze zo algemeen
+mogelijk zijn (forEach en nog een paar)
+
