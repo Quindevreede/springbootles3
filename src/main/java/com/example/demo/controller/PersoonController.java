@@ -20,8 +20,12 @@ import java.util.Optional;
 @RestController
 public class PersoonController {
 
-    @Autowired
     private PersoonService persoonService;
+
+    @Autowired
+    public PersoonController(PersoonService persoonService){
+        this.persoonService = persoonService;
+    }
 
     @GetMapping(value = "/personen")
     public ResponseEntity getPersonen(@RequestParam("achternaam") String achternaam) {

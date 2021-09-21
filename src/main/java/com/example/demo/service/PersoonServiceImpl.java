@@ -3,14 +3,16 @@ package com.example.demo.service;
 import com.example.demo.exception.RecordNotFoundException;
 import com.example.demo.model.Persoon;
 import com.example.demo.repository.PersoonRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
 public class PersoonServiceImpl implements PersoonService {
 
-    private final PersoonRepository persoonRepository;
+    private PersoonRepository persoonRepository;
 
+    @Autowired //met constructor
     public PersoonServiceImpl(PersoonRepository persoonRepository) {
         this.persoonRepository = persoonRepository;
     }
